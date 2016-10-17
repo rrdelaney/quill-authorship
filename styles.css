@@ -1,0 +1,22 @@
+.ql-change:after {
+  content: "Accept";
+}
+
+[data-change-type="insert"], [data-change-type="delete"] {
+  text-decoration: none;
+}
+
+[data-change-type="insert"] { background-color: aquamarine; }
+[data-change-type="delete"] { background-color: tomato; text-decoration: line-through; }
+[data-change-type="accepted-delete"] { display: none; }
+
+[data-change-type="insert"]:hover:after, [data-change-type="delete"]:hover:after {
+  content: attr(owner);
+  background-color: white;
+  position: absolute;
+  z-index: 1;
+  padding: .2rem;
+  margin-top: -.2rem;
+  border: 1px solid grey;
+  border-radius: 5px;
+}
