@@ -14,8 +14,17 @@ class Change extends Inline {
 
   static formats(node) {
     return {
-      owner: node.getAttribute('owner'),
-      changeType: node.getAttribute('data-change-type')
+    	changeType: node.getAttribute('data-change-type'),
+      owner: node.getAttribute('owner')
+    }
+  }
+  
+  format(name, value) {
+  	if (name === 'change') {
+    	const changeType = typeof value === 'string' ? JSON.parse(value).changeType : value.changeType
+    	this.domNode.setAttribute('data-change-type', changeType)
+    } else {
+    	super.format(name, value)
     }
   }
 
@@ -25,18 +34,62 @@ class Change extends Inline {
 
 Quill.register('modules/trackChanges', editor => {
 	editor.on('text-change', (delta, old, source) => {
+  	if (source !== 'user') return
+    
+    const ops = []
+    delta.ops.forEach(op => {
+      if (op.insert || (op.retain && op.attributes && !op.attributes.change)) {
+          ops.push({ 
+          	retain: op.retain || op.insert.length || 1,
+            attributes: { change: { changeType: 'insert', username: USERNAME } }
+          })
+      } else {
+      	ops.push({ retain: op.retain })
+      }
+    })
+    
+    editor.updateContents({ ops }, 'silent')
   })
 })
 
 const toolbar = [
-	{ change: { changeType: 'accepted' } }
+	{ 
+    change: JSON.stringify({ changeType: 'accepted' })
+  }
 ]
+
+const Keyboard = Quill.import('modules/keyboard')
+console.log(Keyboard.keys)
+
+const bindings = {
+	handleBackspaceCollapsed: {
+  	key: Keyboard.keys.BACKSPACE,
+    collapsed: true,
+    handler(range, context) {
+    	if (range.index === 0) return
+      this.quill.formatText(range.index - 1, 1, 'change', { changeType: 'delete' }, 'user')
+      this.quill.setSelection(range.index - 1, 0)
+    }
+  },
+  handleBackspace: {
+  	key: Keyboard.keys.BACKSPACE,
+    collapsed: false,
+    handler(range, context) {
+    	this.quill.format('change', { changeType: 'delete' }, 'user')
+      this.quill.setSelection(range.index, 0)
+    }
+ }
+}
 
 const editor = new Quill('#editor', {
 	modules: {
   	toolbar,
+    keyboard: {
+    	bindings
+    },
     trackChanges: true
-  }
+  },
+  theme: 'snow'
 })
 
 editor.insertText(0, 'This is a change\n', 'change', {
